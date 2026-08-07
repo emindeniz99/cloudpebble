@@ -59,6 +59,30 @@ def store_size_info(project, build_result, platform, zip_file):
         pass
 
 
+def strip_pkjs_source_map(pbw_path):
+    """ Drop the pkjs source map from a built .pbw.
+
+    The SDK's webpack always emits one, and it carries the absolute paths of
+    the machine that built the app — here, this container's temp directory —
+    plus the full JS source inline. The watch never reads it, and a published
+    .pbw is permanent, so it is pure weight: about a quarter of the bundle a
+    phone downloads. Rewrites the archive without those entries.
+    """
+    try:
+        with zipfile.ZipFile(pbw_path, 'r') as z:
+            entries = z.infolist()
+            maps = [e for e in entries if e.filename.endswith('.js.map')]
+            if not maps:
+                return
+            kept = [(e, z.read(e.filename)) for e in entries if not e.filename.endswith('.js.map')]
+        with zipfile.ZipFile(pbw_path, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+            for info, data in kept:
+                z.writestr(info, data)
+    except Exception:
+        # Never fail a good build over a size/hygiene step.
+        logger.exception("Could not strip source maps from %s", pbw_path)
+
+
 @shared_task(ignore_result=True, acks_late=True)
 def run_compile(build_result):
     build_result = BuildResult.objects.get(pk=build_result)
@@ -113,12 +137,15 @@ def run_compile(build_result):
             # so a project can supply sources, never the code that runs.
             # That keeps the same trust model as waf, mcrun and gcc.
             #
-            # PEBBLE_SIGNALS_BUILD_ARGS defaults to --no-prune, which trades
-            # the toolchain's per-module pruning for build time: measured here
-            # on a real watchface, 22s vs 170s for a resource pack of 33.5KB
-            # vs 24.8KB. Hosted builds are the iterate-and-see case, so time
-            # wins by default; a store upload is better served by the author's
-            # own release build, and the setting can turn pruning back on.
+            # PEBBLE_SIGNALS_BUILD_ARGS is empty by default, i.e. the full
+            # pipeline. A build made here can be published as-is (publish
+            # uploads the latest successful build without rebuilding), so the
+            # default has to be the artifact you would want in the store:
+            # measured on a real watchface, skipping the toolchain's
+            # per-module pruning takes 170s down to 22s but leaves the shipped
+            # resource pack at 33.5KB instead of 24.8KB. The rlimits below are
+            # per-process rather than cumulative, so the longer pipeline —
+            # many short tool invocations — stays well inside them.
             if project.source_files.filter(target='tsx').exists():
                 if not settings.PEBBLE_SIGNALS_ROOT:
                     raise Exception(
@@ -154,6 +181,8 @@ def run_compile(build_result):
                 temp_file = os.path.join(base_dir, 'dist.zip')
             else:
                 temp_file = os.path.join(base_dir, 'build', '%s.pbw' % os.path.basename(base_dir))
+            if os.path.exists(temp_file) and temp_file.endswith('.pbw'):
+                strip_pkjs_source_map(temp_file)
             if not os.path.exists(temp_file):
                 success = False
                 output += b'\n\nBuild command exited successfully but did not produce the expected output file.\n'
