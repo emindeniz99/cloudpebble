@@ -1191,6 +1191,15 @@ CloudPebble.Editor = (function() {
                         error.text(gettext("Embedded JS files only support Emery and Gabbro platforms. Please set target platforms in project settings first.")).show();
                     }
                 })();
+            } else if(kind == 'tsx') {
+                (function() {
+                    var name = prompt.find('#new-tsx-file-name').val();
+                    if(!/.+\.(ts|tsx)$/.test(name)) {
+                        error.text(gettext("Files must end in .ts or .tsx")).show();
+                    } else {
+                        files = [{name: name, target: 'tsx'}];
+                    }
+                })();
             } else if(kind == 'layout') {
                 (function() {
                     var name = prompt.find('#new-window-name').val();

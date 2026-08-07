@@ -272,13 +272,17 @@ CloudPebble.Compile = (function() {
         pane.find('#install-in-qemu-basalt-btn #install-in-qemu-chalk-btn').show();
     };
 
+    var debug_requested = function() {
+        return !!(pane && pane.find('#compilation-debug-build').is(':checked'));
+    };
+
     var run_build = function() {
         var temp_build = {started: (new Date()).toISOString(), finished: null, state: 1, uuid: null, id: null, size: {total: null, binary: null, resources: null}};
         update_last_build(pane, temp_build);
         pane.find('#run-build-table').prepend(build_history_row(temp_build));
         ga('send','event', 'build', 'run', {eventValue: ++m_build_count});
         return Ajax.Post('/ide/project/' + PROJECT_ID + '/build/run', {
-            debug: pane.find('#compilation-debug-build').is(':checked')
+            debug: debug_requested()
         }).then(function() {
             mRunningBuild = true;
             return update_build_history(pane);
@@ -301,7 +305,9 @@ CloudPebble.Compile = (function() {
         var temp_build = {started: (new Date()).toISOString(), finished: null, state: 1, uuid: null, id: null, size: {total: null, binary: null, resources: null}};
         update_last_build(pane, temp_build);
         pane.find('#run-build-table').prepend(build_history_row(temp_build));
-        return Ajax.Post('/ide/project/' + PROJECT_ID + '/build/run').then(function(result) {
+        return Ajax.Post('/ide/project/' + PROJECT_ID + '/build/run', {
+            debug: debug_requested()
+        }).then(function(result) {
             return wait_for_build(result.build_id);
         }).then(function(build) {
             return update_build_history(pane).then(function() {

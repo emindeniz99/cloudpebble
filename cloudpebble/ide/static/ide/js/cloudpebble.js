@@ -102,7 +102,7 @@ CloudPebble.Init = function() {
         // instead of the Embedded JS source section.
         var is_alloy = data.type === 'alloy';
         $.each(data.source_files, function(index, value) {
-            if (is_alloy && value.target === 'embeddedjs' && value.is_binary) {
+            if (is_alloy && (value.target === 'embeddedjs' || value.target === 'assets') && value.is_binary) {
                 // Guard against mixed cached frontend bundles during deploys.
                 // If Resources.AddAlloyAsset is unavailable, keep binary files out
                 // of the editor and rely on the unified Resources payload.

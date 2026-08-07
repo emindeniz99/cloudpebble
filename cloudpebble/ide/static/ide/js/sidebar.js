@@ -327,7 +327,7 @@ CloudPebble.Sidebar = (function() {
                     CloudPebble.ProjectInfo = data;
                     var is_alloy = data.type === 'alloy';
                     $.each(data.source_files, function(index, value) {
-                        if (is_alloy && value.target === 'embeddedjs' && value.is_binary) {
+                        if (is_alloy && (value.target === 'embeddedjs' || value.target === 'assets') && value.is_binary) {
                             if (CloudPebble.Resources && _.isFunction(CloudPebble.Resources.AddAlloyAsset)) {
                                 CloudPebble.Resources.AddAlloyAsset(value);
                             }

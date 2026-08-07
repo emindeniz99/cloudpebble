@@ -181,6 +181,7 @@
                     <select id="new-file-type">
                         <option value="c" selected>{% trans 'C file' %}</option>
                         <option value="embeddedjs" class="alloy-only">{% trans 'Embedded JavaScript file' %}</option>
+                        <option value="tsx" class="alloy-only">{% trans 'TypeScript file' %}</option>
                         <option value="js">{% trans 'PebbleKit JavaScript file' %}</option>
                         <option value="json">{% trans 'JSON file' %}</option>
                         <option value="layout">{% trans 'Window Layout' %}</option>
@@ -272,6 +273,15 @@
                     <div class="controls">
                         <input type="text" id="new-embeddedjs-file-name" pattern="[a-zA-Z0-9_/.-]+\.(js|json)$">
                         <span class="help-block">{% trans 'Supports subdirectories (e.g. modules/file.js). For binary assets (.png, .ttf, .pdc), use the "Add New" button in the Resources section.' %}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="tsx-file-options file-group hide">
+                <div class="control-group">
+                    <label class="control-label" for="new-tsx-file-name">{% trans 'Filename' %}</label>
+                    <div class="controls">
+                        <input type="text" id="new-tsx-file-name" pattern="[a-zA-Z0-9_/.-]+\.(ts|tsx)$">
+                        <span class="help-block">{% trans 'Supports subdirectories (e.g. components/dial.tsx). Compiled to embedded JavaScript when you build.' %}</span>
                     </div>
                 </div>
             </div>
@@ -649,8 +659,8 @@ if (window.firebase && firebase.apps && !firebase.apps.length) {
 <script src="/ide/jsi18n/"></script>
 <script src="{% static 'ide/js/json_parse.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/csrf.js' %}?v=20260601" type="text/javascript"></script>
-<script src="{% static 'ide/js/cloudpebble.js' %}?v=20260807c" type="text/javascript"></script>
-<script src="{% static 'ide/js/sidebar.js' %}" type="text/javascript"></script>
+<script src="{% static 'ide/js/cloudpebble.js' %}?v=20260807e" type="text/javascript"></script>
+<script src="{% static 'ide/js/sidebar.js' %}?v=20260807e" type="text/javascript"></script>
 <script src="{% static 'ide/js/radix.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/ycm.js' %}" type="text/javascript"></script>
 <script type="text/javascript">
@@ -658,7 +668,7 @@ if (window.firebase && firebase.apps && !firebase.apps.length) {
 window.JSHINT = window.JSHINT || function() { window.JSHINT.errors = []; return true; };
 window.JSHINT.errors = window.JSHINT.errors || [];
 </script>
-<script src="{% static 'ide/js/editor.js' %}?v=20260807" type="text/javascript"></script>
+<script src="{% static 'ide/js/editor.js' %}?v=20260807e" type="text/javascript"></script>
 <script src="{% static 'ide/js/codefolds.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/syntax.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/autocomplete.js' %}" type="text/javascript"></script>
@@ -666,7 +676,7 @@ window.JSHINT.errors = window.JSHINT.errors || [];
 <script src="{% static 'ide/js/fuzzyprompt.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/live_settings_form.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/compile-reboot.js' %}" type="module"></script>
-<script src="{% static 'ide/js/compile.js' %}?v=20260807" type="text/javascript"></script>
+<script src="{% static 'ide/js/compile.js' %}?v=20260807e" type="text/javascript"></script>
 <script src="{% static 'ide/js/dependencies.js' %}" type="text/javascript"></script>
 <script src="{% static 'ide/js/resources.js' %}?v=20260219d" type="text/javascript"></script>
 <script src="{% static 'ide/js/textext_tagger.js' %}" type="text/javascript"></script>
