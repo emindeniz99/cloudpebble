@@ -219,7 +219,7 @@ def github_push(user, commit_message, repo_name, project):
         their_manifest_dict = {}
         their_res_dict = {'media': []}
 
-    our_manifest_dict = generate_manifest_dict(project, resources)
+    our_manifest_dict = generate_manifest_dict(project, resources, for_export=True)
     our_res_dict = our_manifest_dict.get('resources', our_manifest_dict.get('pebble', our_manifest_dict).get('resources', {'media': []}))
 
     if our_res_dict != their_res_dict:

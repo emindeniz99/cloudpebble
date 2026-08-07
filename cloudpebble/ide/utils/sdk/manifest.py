@@ -124,9 +124,9 @@ def _add_ts_toolchain_tooling(project, manifest):
     }
 
 
-def generate_manifest_dict(project, resources):
+def generate_manifest_dict(project, resources, for_export=False):
     if project.is_standard_project_type:
-        return generate_v3_manifest_dict(project, resources)
+        return generate_v3_manifest_dict(project, resources, for_export)
     elif project.project_type == "simplyjs":
         return generate_simplyjs_manifest_dict(project)
     elif project.project_type == "pebblejs":
