@@ -105,6 +105,9 @@
         <hr>
         <div class="compilation-buttons three-buttons">
             <button class="btn btn-affirmative" id="compilation-run-build-button">{% trans 'Run build' %}</button>
+            <label class="checkbox inline" style="margin-left: 10px;" title="{% trans 'Skips the slower optimisation passes and keeps the JS source map. Faster to iterate on; publish a release build.' %}">
+                <input type="checkbox" id="compilation-debug-build"> {% trans 'Debug build' %}
+            </label>
             <a id="last-compilation-pbw" href="#" class="btn hide">
                 {% if project.project_type == 'package'%}
                     {% trans 'Get Package' %}

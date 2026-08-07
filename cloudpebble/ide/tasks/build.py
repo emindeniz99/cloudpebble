@@ -157,7 +157,8 @@ def run_compile(build_result):
                      os.path.join(settings.PEBBLE_SIGNALS_ROOT,
                                   'node_modules', 'pebble-signals', 'dist', 'build.mjs'),
                      '--app', 'main', '--generate-only']
-                    + settings.PEBBLE_SIGNALS_BUILD_ARGS,
+                    + (['--no-prune'] if build_result.debug
+                       else settings.PEBBLE_SIGNALS_BUILD_ARGS),
                     stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ
                 )
 
@@ -181,7 +182,9 @@ def run_compile(build_result):
                 temp_file = os.path.join(base_dir, 'dist.zip')
             else:
                 temp_file = os.path.join(base_dir, 'build', '%s.pbw' % os.path.basename(base_dir))
-            if os.path.exists(temp_file) and temp_file.endswith('.pbw'):
+            # A debug build keeps the map: the author asked for the thing they
+            # can inspect, not the thing they would ship.
+            if os.path.exists(temp_file) and temp_file.endswith('.pbw') and not build_result.debug:
                 strip_pkjs_source_map(temp_file)
             if not os.path.exists(temp_file):
                 success = False

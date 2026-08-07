@@ -277,7 +277,9 @@ CloudPebble.Compile = (function() {
         update_last_build(pane, temp_build);
         pane.find('#run-build-table').prepend(build_history_row(temp_build));
         ga('send','event', 'build', 'run', {eventValue: ++m_build_count});
-        return Ajax.Post('/ide/project/' + PROJECT_ID + '/build/run').then(function() {
+        return Ajax.Post('/ide/project/' + PROJECT_ID + '/build/run', {
+            debug: pane.find('#compilation-debug-build').is(':checked')
+        }).then(function() {
             mRunningBuild = true;
             return update_build_history(pane);
         });

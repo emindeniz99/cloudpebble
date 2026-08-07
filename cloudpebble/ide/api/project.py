@@ -470,7 +470,8 @@ def project_info(request, project_id):
 @json_view
 def compile_project(request, project_id):
     project = get_object_or_404(Project, pk=project_id, owner=request.user)
-    build = BuildResult.objects.create(project=project)
+    build = BuildResult.objects.create(project=project,
+                                       debug=request.POST.get('debug') == 'true')
     task = run_compile.delay(build.id)
     return {"build_id": build.id, "task_id": task.task_id}
 
@@ -486,6 +487,7 @@ def _serialize_build(build, project):
     return {
         'uuid': build.uuid,
         'state': build.state,
+        'debug': build.debug,
         'started': str(build.started),
         'finished': str(build.finished) if build.finished else None,
         'id': build.id,

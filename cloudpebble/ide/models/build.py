@@ -46,6 +46,11 @@ class BuildResult(IdeModel):
     project = models.ForeignKey(Project, related_name='builds', on_delete=models.CASCADE)
     uuid = models.CharField(max_length=36, default=generate_uuid, validators=regexes.validator('uuid', _('Invalid UUID.')))
     state = models.IntegerField(choices=STATE_CHOICES, default=STATE_WAITING)
+    # A debug build trades artifact quality for turnaround: it skips the
+    # toolchain's slower optimisation passes and keeps the pkjs source map.
+    # Publishing wants the other end of that trade, so the flag is recorded
+    # per build rather than per project.
+    debug = models.BooleanField(default=False)
     started = models.DateTimeField(auto_now_add=True, db_index=True)
     finished = models.DateTimeField(blank=True, null=True)
 
