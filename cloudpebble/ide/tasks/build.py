@@ -125,7 +125,10 @@ def run_compile(build_result):
                     validate_dependency_version(version)
                 npm_command = [settings.NPM_BINARY, "install", "--ignore-scripts", "--no-bin-links"]
                 output = subprocess.check_output(npm_command, stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ)
-                subprocess.check_output([settings.NPM_BINARY, "dedupe"], stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ)
+                # --no-bin-links here too: npm dedupe re-links node_modules/.bin,
+                # undoing the flag one line above. Anything on a build tool's
+                # PATH-like probe is then project-controlled code.
+                subprocess.check_output([settings.NPM_BINARY, "dedupe", "--ignore-scripts", "--no-bin-links"], stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ)
 
             # TypeScript-authored embedded JS: compile src/tsx into
             # src/embeddedjs before the SDK's Moddable prebuild reads it.
@@ -155,6 +158,13 @@ def run_compile(build_result):
                         "TypeScript toolchain installed."
                     )
                 entry = os.path.join(toolchain['root'], 'node_modules', toolchain['package'])
+                # The toolchain looks for its tools by probing for a local
+                # node_modules/.bin before falling back to its own pinned copy.
+                # That directory is reachable from project content (an npm
+                # dependency's "bin", or a resource path that climbs out of the
+                # resource directory), so it must not exist when the toolchain
+                # runs — otherwise the project chooses the compiler.
+                shutil.rmtree(os.path.join(base_dir, 'node_modules', '.bin'), ignore_errors=True)
                 output += subprocess.check_output(
                     [settings.NODE_BINARY]
                     + [os.path.join(entry, toolchain['build'][0])] + toolchain['build'][1:]
