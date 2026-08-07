@@ -46,7 +46,7 @@ services:
       - AWS_S3_BUILDS_BUCKET=${AWS_S3_BUILDS_BUCKET:-builds.cloudpebble.net}
       - AWS_S3_EXPORT_BUCKET=${AWS_S3_EXPORT_BUCKET:-export.cloudpebble.net}
       - MEDIA_URL=${PUBLIC_URL}/s3builds/
-      - PEBBLE_SIGNALS_BUILD_ARGS=${PEBBLE_SIGNALS_BUILD_ARGS:---no-prune}
+      - PEBBLE_SIGNALS_BUILD_ARGS=${PEBBLE_SIGNALS_BUILD_ARGS:-}
       - QEMU_URLS=http://qemu/
       - QEMU_PUBLIC_URL=${PUBLIC_URL}
       - YCM_URLS=http://ycmd:80/
@@ -78,7 +78,7 @@ services:
     environment:
       - DEBUG=yes
       - RUN_CELERY=yes
-      - PEBBLE_SIGNALS_BUILD_ARGS=${PEBBLE_SIGNALS_BUILD_ARGS:---no-prune}
+      - PEBBLE_SIGNALS_BUILD_ARGS=${PEBBLE_SIGNALS_BUILD_ARGS:-}
       - AWS_ENABLED=yes
       - EXPORT_ROOT=http://web:80/export.cloudpebble.net/
       - AWS_S3_FAKE_S3=${AWS_S3_FAKE_S3-s3:4569}

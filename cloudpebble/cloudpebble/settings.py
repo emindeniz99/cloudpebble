@@ -441,14 +441,14 @@ NODE_BINARY = _environ.get('NODE_BINARY', 'node')
 # compile step — projects with TSX sources then fail loudly rather than
 # building stale embedded JS.
 PEBBLE_SIGNALS_ROOT = _environ.get('PEBBLE_SIGNALS_ROOT', '/opt/pebble-signals')
-# Extra flags for that compile step, space separated. The default trades the
-# toolchain's per-module pruning for build time. Measured on a real watchface,
-# on this stack: pruning takes the build from 22s to 170s and shrinks the
-# shipped resource pack from 33.5KB to 24.8KB (-26%). For a hosted build the
-# time is the scarcer resource — an author shipping to the store still gets
-# the smaller artifact from a local release build. An operator with CPU
-# headroom can set this to '' to always run the full pipeline.
-PEBBLE_SIGNALS_BUILD_ARGS = _environ.get('PEBBLE_SIGNALS_BUILD_ARGS', '--no-prune').split()
+# Extra flags for that compile step, space separated. Empty by default: a
+# build here can be PUBLISHED (publish_submit uploads the latest successful
+# build to the app store without rebuilding), so the artifact has to be the
+# good one. Measured on a real watchface: the toolchain's per-module pruning
+# costs 22s -> 170s of wall time and saves 33.5KB -> 24.8KB in the shipped
+# resource pack, which is the right trade when the output is permanent.
+# An operator who prefers faster iteration can set '--no-prune'.
+PEBBLE_SIGNALS_BUILD_ARGS = _environ.get('PEBBLE_SIGNALS_BUILD_ARGS', '').split()
 
 # Toolchain now comes from pebble-tool SDK, available in PATH
 ARM_CS_TOOLS = _environ.get('ARM_CS_TOOLS', '')
