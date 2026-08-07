@@ -117,6 +117,12 @@ function createHost() {
                 moduleResolution: ts.ModuleResolutionKind.Bundler,
                 allowJs: true,
                 checkJs: true,
+                // .tsx sources: without these the service reports every JSX
+                // element as a syntax error. The import source matches the
+                // tsconfig the build generates, so completions and diagnostics
+                // agree with what the compiler will actually do.
+                jsx: ts.JsxEmit.ReactJSX,
+                jsxImportSource: 'runtime',
                 strict: false,
                 noEmit: true,
                 esModuleInterop: true,

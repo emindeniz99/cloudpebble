@@ -58,8 +58,13 @@ CloudPebble.TSCompletions = new (function() {
         mInitialising = true;
         mFailed = false;
 
-        // Resolve the worker script URL relative to the typings URL
-        var workerScriptUrl = typingsUrl.replace('ts-typings/alloy-typings.json', 'js/ts-worker.js');
+        // Resolve the worker script URL relative to the typings URL. The
+        // version query rides along from the typings URL where present: the
+        // worker is fetched by XHR, so without one a returning browser keeps
+        // serving the old language service after a deploy.
+        var version = (typingsUrl.split('?')[1] || '');
+        var workerScriptUrl = typingsUrl.split('?')[0].replace('ts-typings/alloy-typings.json', 'js/ts-worker.js')
+            + (version ? '?' + version : '');
 
         // Fetch the worker script asynchronously, then create a blob Worker
         var xhr = new XMLHttpRequest();
