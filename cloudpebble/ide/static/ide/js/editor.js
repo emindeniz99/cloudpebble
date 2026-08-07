@@ -200,6 +200,13 @@ CloudPebble.Editor = (function() {
                 file_kind = 'js';
                 file_mode = 'javascript';
             }
+            else if (/\.tsx?$/.test(file.name)) {
+                // TypeScript/TSX: CodeMirror's javascript mode handles both
+                // with these options. Without this they fall through to the
+                // C mode below and every line highlights as an error.
+                file_kind = 'js';
+                file_mode = {name: 'javascript', typescript: true, jsx: /\.tsx$/.test(file.name)};
+            }
             else if (/\.json$/.test(file.name)) {
                 file_kind = 'json';
                 file_mode = 'application/json';

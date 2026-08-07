@@ -45,7 +45,8 @@ CloudPebble.TargetNames =   {
     'pkjs': gettext("PebbleKit JS"),
     'worker': gettext("Worker source"),
     'common': gettext("Shared JavaScript"),
-    'embeddedjs': gettext("Embedded JS")
+    'embeddedjs': gettext("Embedded JS"),
+    'tsx': gettext("TypeScript")
 };
 
 CloudPebble.ProjectInfo = {};
