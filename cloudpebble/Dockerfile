@@ -17,10 +17,13 @@ RUN npm install -g jshint@2.13.6 typescript@3.9.10
 
 # TypeScript toolchain for alloy projects that author their embedded JS in
 # TSX. Pinned HERE, in the image, so builds run a version this repo chose —
-# never one a project's own package.json could point at.
-ARG PEBBLE_SIGNALS_VERSION=0.2.1
-RUN mkdir -p /opt/pebble-signals && cd /opt/pebble-signals && \
-  npm install --no-save --ignore-scripts pebble-signals@${PEBBLE_SIGNALS_VERSION} \
+# never one a project's own package.json could point at. The package name and
+# invocation the build uses come from settings.TS_TOOLCHAIN; swapping the
+# toolchain means changing these two args and that dict, not code.
+ARG TS_TOOLCHAIN_PACKAGE=pebble-signals
+ARG TS_TOOLCHAIN_VERSION=0.2.1
+RUN mkdir -p /opt/ts-toolchain && cd /opt/ts-toolchain && \
+  npm install --no-save --ignore-scripts ${TS_TOOLCHAIN_PACKAGE}@${TS_TOOLCHAIN_VERSION} \
     typescript@^6.0 esbuild@^0.28.1
 
 # Django stuff + emulator dependencies

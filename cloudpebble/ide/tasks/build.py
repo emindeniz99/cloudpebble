@@ -130,14 +130,15 @@ def run_compile(build_result):
             # TypeScript-authored embedded JS: compile src/tsx into
             # src/embeddedjs before the SDK's Moddable prebuild reads it.
             #
-            # The toolchain that runs here is the one baked into the image
-            # (PEBBLE_SIGNALS_ROOT, pinned at image-build time), NEVER one
-            # resolved from the project's own package.json, and the command
-            # is fixed rather than taken from the project's npm scripts —
-            # so a project can supply sources, never the code that runs.
-            # That keeps the same trust model as waf, mcrun and gcc.
+            # What runs is the toolchain described by settings.TS_TOOLCHAIN and
+            # INSTALLED IN THE IMAGE — never one resolved from the project's
+            # own package.json — and the command is fixed rather than read from
+            # the project's npm scripts. A project supplies sources; it never
+            # supplies the code that runs, which is the same trust model as
+            # waf, mcrun and gcc, and the reason `npm install` above keeps
+            # --ignore-scripts.
             #
-            # PEBBLE_SIGNALS_BUILD_ARGS is empty by default, i.e. the full
+            # TS_TOOLCHAIN_BUILD_ARGS is empty by default, i.e. the full
             # pipeline. A build made here can be published as-is (publish
             # uploads the latest successful build without rebuilding), so the
             # default has to be the artifact you would want in the store:
@@ -147,18 +148,19 @@ def run_compile(build_result):
             # per-process rather than cumulative, so the longer pipeline —
             # many short tool invocations — stays well inside them.
             if project.source_files.filter(target='tsx').exists():
-                if not settings.PEBBLE_SIGNALS_ROOT:
+                toolchain = settings.TS_TOOLCHAIN
+                if not toolchain.get('root'):
                     raise Exception(
                         "This project has TypeScript sources but the build image has no "
                         "TypeScript toolchain installed."
                     )
+                entry = os.path.join(toolchain['root'], 'node_modules', toolchain['package'])
                 output += subprocess.check_output(
-                    [settings.NODE_BINARY,
-                     os.path.join(settings.PEBBLE_SIGNALS_ROOT,
-                                  'node_modules', 'pebble-signals', 'dist', 'build.mjs'),
-                     '--app', 'main', '--generate-only']
+                    [settings.NODE_BINARY]
+                    + [os.path.join(entry, toolchain['build'][0])] + toolchain['build'][1:]
+                    + toolchain['generate_args']
                     + (['--no-prune'] if build_result.debug
-                       else settings.PEBBLE_SIGNALS_BUILD_ARGS),
+                       else settings.TS_TOOLCHAIN_BUILD_ARGS),
                     stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ
                 )
 

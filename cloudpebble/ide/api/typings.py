@@ -21,22 +21,22 @@ _cache = None
 
 
 def _toolchain_typings():
-    """ {'runtime/<name>.d.ts': <declaration source>} for the pinned toolchain. """
+    """ {'<types_as><name>.d.ts': <declaration source>} for the pinned toolchain. """
     global _cache
     if _cache is not None:
         return _cache
-    root = settings.PEBBLE_SIGNALS_ROOT
+    toolchain = settings.TS_TOOLCHAIN
     bundle = {}
-    if root:
-        types_dir = os.path.join(root, 'node_modules', 'pebble-signals',
-                                 'src', 'embeddedjs', 'runtime-types')
+    if toolchain.get('root'):
+        types_dir = os.path.join(toolchain['root'], 'node_modules',
+                                 toolchain['package'], toolchain['typings'])
         if os.path.isdir(types_dir):
             for name in sorted(os.listdir(types_dir)):
                 if not name.endswith('.d.ts'):
                     continue
                 try:
                     with open(os.path.join(types_dir, name), 'r') as f:
-                        bundle['runtime/%s' % name] = f.read()
+                        bundle['%s%s' % (toolchain['types_as'], name)] = f.read()
                 except OSError:
                     logger.exception("Could not read toolchain typing %s", name)
     _cache = bundle

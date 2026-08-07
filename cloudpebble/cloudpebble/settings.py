@@ -436,19 +436,44 @@ SDK3_PEBBLE_WAF = _environ.get('SDK3_PEBBLE_WAF', '/sdk3/pebble/waf')
 
 NPM_BINARY = _environ.get('NPM_BINARY', 'npm')
 NODE_BINARY = _environ.get('NODE_BINARY', 'node')
-# Root of the image-pinned TypeScript toolchain for alloy projects with
-# src/tsx sources (installed in cloudpebble/Dockerfile). Empty disables the
-# compile step — projects with TSX sources then fail loudly rather than
-# building stale embedded JS.
-PEBBLE_SIGNALS_ROOT = _environ.get('PEBBLE_SIGNALS_ROOT', '/opt/pebble-signals')
-# Extra flags for that compile step, space separated. Empty by default: a
-# build here can be PUBLISHED (publish_submit uploads the latest successful
-# build to the app store without rebuilding), so the artifact has to be the
-# good one. Measured on a real watchface: the toolchain's per-module pruning
-# costs 22s -> 170s of wall time and saves 33.5KB -> 24.8KB in the shipped
-# resource pack, which is the right trade when the output is permanent.
-# An operator who prefers faster iteration can set '--no-prune'.
-PEBBLE_SIGNALS_BUILD_ARGS = _environ.get('PEBBLE_SIGNALS_BUILD_ARGS', '').split()
+# The TypeScript toolchain for alloy projects with src/tsx sources, as
+# installed in the image (see cloudpebble/Dockerfile). One dictionary rather
+# than scattered constants so that pointing the IDE at a different toolchain
+# is configuration, not a code change — everything CloudPebble needs to know
+# about it is named here:
+#   root     where it is installed
+#   package  the npm package inside that install
+#   build    argv appended to `node <root>/node_modules/<package>/`, run in
+#            the assembled project directory
+#   typings  directory of .d.ts to feed the editor's language service
+#   types_as prefix those declarations get in the service's virtual tree,
+#            matching the module specifier the sources import
+#   template scaffold offered under Create New Project
+# Set TS_TOOLCHAIN_ROOT='' to disable: projects with src/tsx then fail loudly
+# rather than building stale JavaScript.
+TS_TOOLCHAIN = {
+    'root': _environ.get('TS_TOOLCHAIN_ROOT', '/opt/ts-toolchain'),
+    'package': _environ.get('TS_TOOLCHAIN_PACKAGE', 'pebble-signals'),
+    # The toolchain's canonical invocation, relative to the installed package.
+    # This is also the `build` script an exported project gets, so it must be
+    # the FULL local pipeline; hosted builds append `generate_args` because the
+    # SDK's own Moddable prebuild takes over after the TS lowering.
+    'build': ['dist/build.mjs', '--app', 'main'],
+    'generate_args': ['--generate-only'],
+    'typings': 'src/embeddedjs/runtime-types',
+    'types_as': 'runtime/',
+    'template': 'templates/app',
+}
+
+# Extra flags for the compile step, space separated. Empty by default: a build
+# here can be PUBLISHED (publish_submit uploads the latest successful build to
+# the app store without rebuilding), so the artifact has to be the good one.
+# Measured on a real watchface: the toolchain's per-module pruning costs
+# 22s -> 170s of wall time and saves 33.5KB -> 24.8KB in the shipped resource
+# pack, which is the right trade when the output is permanent. The per-build
+# "Debug build" checkbox is the per-case escape; this is the deployment-wide
+# default.
+TS_TOOLCHAIN_BUILD_ARGS = _environ.get('TS_TOOLCHAIN_BUILD_ARGS', '').split()
 
 # Toolchain now comes from pebble-tool SDK, available in PATH
 ARM_CS_TOOLS = _environ.get('ARM_CS_TOOLS', '')

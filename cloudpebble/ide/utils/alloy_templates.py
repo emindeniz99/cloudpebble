@@ -80,10 +80,11 @@ def _ordered_paths(paths):
 
 def _toolchain_template_dir():
     """ templates/app inside the pinned toolchain, or None. """
-    root = getattr(settings, 'PEBBLE_SIGNALS_ROOT', '')
-    if not root:
+    toolchain = getattr(settings, 'TS_TOOLCHAIN', {})
+    if not toolchain.get('root'):
         return None
-    path = os.path.join(root, 'node_modules', 'pebble-signals', 'templates', 'app')
+    path = os.path.join(toolchain['root'], 'node_modules',
+                        toolchain['package'], toolchain['template'])
     return path if os.path.isdir(path) else None
 
 
@@ -100,7 +101,7 @@ def _render_toolchain_template(target_dir):
         '__APP_NAME__': 'Pebble App',
         '__AUTHOR__': 'CloudPebble',
         '__UUID__': str(uuid.uuid4()),
-        '__PKG_VERSION__': _toolchain_version(),
+        '__PKG_VERSION__': toolchain_version(),
     }
     bundle = io.BytesIO()
     with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -122,10 +123,11 @@ def _render_toolchain_template(target_dir):
     return bundle.getvalue()
 
 
-def _toolchain_version():
-    root = getattr(settings, 'PEBBLE_SIGNALS_ROOT', '')
+def toolchain_version():
+    toolchain = getattr(settings, 'TS_TOOLCHAIN', {})
     try:
-        with open(os.path.join(root, 'node_modules', 'pebble-signals', 'package.json')) as handle:
+        with open(os.path.join(toolchain['root'], 'node_modules',
+                               toolchain['package'], 'package.json')) as handle:
             return json.load(handle)['version']
     except (OSError, ValueError, KeyError):
         return '0.0.0'
