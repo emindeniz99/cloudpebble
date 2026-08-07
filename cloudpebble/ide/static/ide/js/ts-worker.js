@@ -185,7 +185,11 @@ function createHost() {
     };
 }
 
-var _defaultLibPath = '/lib.es2022.full.d.ts';
+// Not the '.full' variant: that one references lib.dom, so the service
+// offered document/window/HTMLElement to code running on a watch that has
+// none — and pulled 1.9 MB to do it. generate_tsconfig_file pins the same
+// lib, so the editor and the exported tsconfig agree.
+var _defaultLibPath = '/lib.es2022.d.ts';
 function getDefaultLibPath() { return _defaultLibPath; }
 
 // TypeScript's lib files are a REFERENCE CHAIN: lib.es2022.full.d.ts is 1KB of
@@ -212,7 +216,7 @@ function getLib(path) {
     } catch (e) {
         content = undefined;
     }
-    if (content === undefined && name === 'lib.es2022.full.d.ts') {
+    if (content === undefined && name === 'lib.es2022.d.ts') {
         content = getMinimalLib(); // offline: better than nothing
     }
     _libs[name] = content;

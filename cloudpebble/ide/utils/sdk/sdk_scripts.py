@@ -319,6 +319,10 @@ def generate_tsconfig_file(project):
     return json.dumps({
         "compilerOptions": {
             "target": "es2022",
+            # Explicit, because tsc's default for this target is
+            # lib.es2022.full.d.ts, which includes the DOM. The watch has no
+            # DOM, and the in-browser language service pins the same lib.
+            "lib": ["es2022"],
             "module": "esnext",
             "moduleResolution": "bundler",
             "jsx": "react-jsx",
