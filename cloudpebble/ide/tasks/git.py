@@ -23,7 +23,7 @@ from ide.tasks import do_import_archive, run_compile
 from ide.tasks.archive import get_filename_variant
 from ide.utils.git import git_sha, git_blob
 from ide.utils.project import find_project_root_and_manifest, BaseProjectItem, InvalidProjectArchiveException, MANIFEST_KINDS
-from ide.utils.sdk import generate_manifest_dict, generate_manifest, generate_wscript_file, load_manifest_dict, manifest_name_for_project
+from ide.utils.sdk import generate_manifest_dict, generate_manifest, generate_wscript_file, generate_tsconfig_file, load_manifest_dict, manifest_name_for_project
 from utils.td_helper import send_td_event
 from utils.events import publish_event
 
@@ -208,6 +208,7 @@ def github_push(user, commit_message, repo_name, project):
     # Compare the resource dicts
     remote_manifest_path = root + manifest_name_for_project(project)
     remote_wscript_path = root + 'wscript'
+    remote_tsconfig_path = root + 'tsconfig.json'
 
     if manifest_item:
         their_manifest_dict = json.loads(manifest_item.read())
@@ -242,6 +243,20 @@ def github_push(user, commit_message, repo_name, project):
         else:
             next_tree[remote_manifest_path] = InputGitTreeElement(path=remote_manifest_path, mode='100644', type='blob',
                                                                   content=generate_manifest(project, resources, for_export=True))
+
+    # The manifest above tells a cloned project which toolchain to install;
+    # without the compiler config it still cannot build. Generated on push for
+    # the same reason it is generated into the export archive.
+    if project.source_files.filter(target='tsx').exists():
+        tsconfig = generate_tsconfig_file(project)
+        if remote_tsconfig_path not in next_tree:
+            next_tree[remote_tsconfig_path] = InputGitTreeElement(
+                path=remote_tsconfig_path, mode='100644', type='blob', content=tsconfig)
+            has_changed = True
+        elif next_tree[remote_tsconfig_path]._InputGitTreeElement__content != tsconfig:
+            next_tree[remote_tsconfig_path]._InputGitTreeElement__sha = NotSet
+            next_tree[remote_tsconfig_path]._InputGitTreeElement__content = tsconfig
+            has_changed = True
 
     if project.project_type == 'native' and remote_wscript_path not in next_tree:
         next_tree[remote_wscript_path] = InputGitTreeElement(path=remote_wscript_path, mode='100644', type='blob',
