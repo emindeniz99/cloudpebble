@@ -181,8 +181,8 @@ def run_compile(build_result):
                     [settings.NODE_BINARY]
                     + [os.path.join(entry, toolchain['build'][0])] + toolchain['build'][1:]
                     + toolchain['generate_args']
-                    + (['--no-prune'] if build_result.debug
-                       else settings.TS_TOOLCHAIN_BUILD_ARGS),
+                    + settings.TS_TOOLCHAIN_BUILD_ARGS
+                    + (toolchain.get('debug_args', []) if build_result.debug else []),
                     stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ
                 )
 

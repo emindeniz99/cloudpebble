@@ -460,6 +460,9 @@ TS_TOOLCHAIN = {
     # SDK's own Moddable prebuild takes over after the TS lowering.
     'build': ['dist/build.mjs', '--app', 'main'],
     'generate_args': ['--generate-only'],
+    # Appended instead of TS_TOOLCHAIN_BUILD_ARGS when the developer asks for a
+    # debug build: what "debug" means is the toolchain's vocabulary.
+    'debug_args': ['--no-prune'],
     'typings': 'src/embeddedjs/runtime-types',
     'types_as': 'runtime/',
     'template': 'templates/app',
