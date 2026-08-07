@@ -5,6 +5,7 @@ from ide.api import proxy_keen, check_task, get_shortlink, heartbeat
 from ide.api.git import github_push, github_pull, set_project_repo, create_project_repo
 from ide.api.sse import project_events
 from ide.api.phone import ping_phone, check_phone, list_phones, update_phone
+from ide.api.typings import toolchain_typings
 from ide.api.project import (
     project_info,
     compile_project,
@@ -297,6 +298,7 @@ urlpatterns = [
         name="remove_github_repo_sync_auth",
     ),
     re_path(r"^import/zip", import_zip, name="import_zip"),
+    re_path(r"^ts-typings/toolchain$", toolchain_typings, name="toolchain_typings"),
     re_path(r"^import/github", import_github, name="import_github"),
     re_path(r"^import/gist", do_import_gist, name="import_gist"),
     re_path(r"^transition/accept", transition_accept, name="transition_accept"),

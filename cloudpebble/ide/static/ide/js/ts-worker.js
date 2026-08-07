@@ -57,13 +57,26 @@ function handleMessage(msg) {
     self.postMessage({_id: msg._id, result: result});
 }
 
-function init(typingsUrl) {
-    // Fetch the alloy typings bundle
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', typingsUrl, false); // synchronous in worker
-    xhr.send();
-    if (xhr.status === 200) {
-        typings = JSON.parse(xhr.responseText);
+function fetchTypings(url) {
+    if (!url) return {};
+    try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // synchronous in worker
+        xhr.send();
+        return xhr.status === 200 ? JSON.parse(xhr.responseText) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function init(typingsUrl, toolchainTypingsUrl) {
+    // Platform APIs, then whatever the project's toolchain declares. The
+    // second bundle is optional: a deployment without a TypeScript toolchain
+    // installed simply has none, and everything else still works.
+    typings = fetchTypings(typingsUrl);
+    var extra = fetchTypings(toolchainTypingsUrl);
+    for (var key in extra) {
+        if (Object.prototype.hasOwnProperty.call(extra, key)) typings[key] = extra[key];
     }
 
     // Create the language service
@@ -102,9 +115,8 @@ function createHost() {
             } else if (path.indexOf('/typings/') === 0) {
                 var typingKey = path.substring('/typings/'.length);
                 content = typings[typingKey];
-            } else if (path === getDefaultLibPath()) {
-                // Return a minimal lib for ES2025 basics
-                content = getDefaultLib();
+            } else if (isLibPath(path)) {
+                content = getLib(path);
             }
             if (content === undefined) return undefined;
             return ts.ScriptSnapshot.fromString(content);
@@ -135,13 +147,15 @@ function createHost() {
                     'Resource': ['/typings/Resource.d.ts'],
                     'embedded:sensor/*': ['/typings/embedded/*'],
                     'embedded:network/*': ['/typings/embedded_network/*'],
+                    // Declarations shipped by the project's own toolchain.
+                    'runtime/*': ['/typings/runtime/*'],
                 }
             };
         },
         getDefaultLibFileName: function() { return getDefaultLibPath(); },
         fileExists: function(path) {
             if (files[path]) return true;
-            if (path === getDefaultLibPath()) return true;
+            if (isLibPath(path)) return getLib(path) !== undefined;
             if (path.indexOf('/typings/') === 0) {
                 var key = path.substring('/typings/'.length);
                 return typings[key] !== undefined;
@@ -154,7 +168,7 @@ function createHost() {
                 var key = path.substring('/typings/'.length);
                 return typings[key];
             }
-            if (path === getDefaultLibPath()) return getDefaultLib();
+            if (isLibPath(path)) return getLib(path);
             return undefined;
         },
         directoryExists: function(path) {
@@ -171,21 +185,42 @@ function createHost() {
     };
 }
 
-var _defaultLibPath = '/lib.es2022.d.ts';
+var _defaultLibPath = '/lib.es2022.full.d.ts';
 function getDefaultLibPath() { return _defaultLibPath; }
 
-var _defaultLib = null;
-function getDefaultLib() {
-    if (_defaultLib !== null) return _defaultLib;
-    // Fetch the default lib from CDN
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://cdn.jsdelivr.net/npm/typescript@5.9/lib/lib.es2022.full.d.ts', false);
-    xhr.send();
-    if (xhr.status === 200) {
-        _defaultLib = xhr.responseText;
-    } else {
-        // Minimal fallback
-        _defaultLib = [
+// TypeScript's lib files are a REFERENCE CHAIN: lib.es2022.full.d.ts is 1KB of
+// `/// <reference lib="..." />` lines, and the compiler asks the host for each
+// referenced lib in turn. Serving only the entry point therefore leaves the
+// program with no Date, Math, Symbol.iterator or Promise — every use of them
+// reads as an error. Resolve any lib.*.d.ts the compiler asks for.
+var LIB_CDN = 'https://cdn.jsdelivr.net/npm/typescript@5.9/lib/';
+var _libs = {};
+
+function isLibPath(path) {
+    return /(^|\/)lib\.[a-z0-9.]*d\.ts$/.test(path);
+}
+
+function getLib(path) {
+    var name = path.substring(path.lastIndexOf('/') + 1);
+    if (Object.prototype.hasOwnProperty.call(_libs, name)) return _libs[name];
+    var content;
+    try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', LIB_CDN + name, false); // synchronous in worker
+        xhr.send();
+        content = xhr.status === 200 ? xhr.responseText : undefined;
+    } catch (e) {
+        content = undefined;
+    }
+    if (content === undefined && name === 'lib.es2022.full.d.ts') {
+        content = getMinimalLib(); // offline: better than nothing
+    }
+    _libs[name] = content;
+    return content;
+}
+
+function getMinimalLib() {
+    return [
             'interface Array<T> { length: number; push(...items: T[]): number; pop(): T | undefined; map<U>(fn: (v: T) => U): U[]; filter(fn: (v: T) => boolean): T[]; forEach(fn: (v: T) => void): void; indexOf(item: T): number; slice(start?: number, end?: number): T[]; splice(start: number, deleteCount?: number, ...items: T[]): T[]; join(sep?: string): string; }',
             'interface String { length: number; charAt(i: number): string; indexOf(s: string): number; slice(start?: number, end?: number): string; split(sep: string): string[]; trim(): string; replace(pattern: string | RegExp, replacement: string): string; startsWith(s: string): boolean; endsWith(s: string): boolean; includes(s: string): boolean; toLowerCase(): string; toUpperCase(): string; substring(start: number, end?: number): string; }',
             'interface Number { toFixed(digits?: number): string; toString(radix?: number): string; }',
@@ -229,8 +264,6 @@ function getDefaultLib() {
             'declare var Error: ErrorConstructor;',
             'declare function trace(msg: string): void;',
         ].join('\n');
-    }
-    return _defaultLib;
 }
 
 function updateFile(path, content) {

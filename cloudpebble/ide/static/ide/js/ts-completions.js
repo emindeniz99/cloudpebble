@@ -52,7 +52,7 @@ CloudPebble.TSCompletions = new (function() {
      * Initialize the TypeScript worker. Call once when an Alloy project is loaded.
      * The typingsUrl should point to the alloy-typings.json bundle.
      */
-    this.init = function(typingsUrl) {
+    this.init = function(typingsUrl, toolchainTypingsUrl) {
         if (mInitialising || mReady) return;
         if (!typingsUrl) return;
         mInitialising = true;
@@ -78,7 +78,11 @@ CloudPebble.TSCompletions = new (function() {
             }
             try {
                 var absTypingsUrl = new URL(typingsUrl, window.location.href).href;
-                var workerCode = xhr.responseText + '\ninit(' + JSON.stringify(absTypingsUrl) + ');';
+                var absToolchainUrl = toolchainTypingsUrl
+                    ? new URL(toolchainTypingsUrl, window.location.href).href
+                    : '';
+                var workerCode = xhr.responseText + '\ninit(' + JSON.stringify(absTypingsUrl)
+                    + ', ' + JSON.stringify(absToolchainUrl) + ');';
                 var blob = new Blob([workerCode], {type: 'application/javascript'});
                 var blobUrl = URL.createObjectURL(blob);
 
