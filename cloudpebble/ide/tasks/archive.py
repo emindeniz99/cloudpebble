@@ -18,7 +18,7 @@ import utils.s3 as s3
 from ide.models.files import SourceFile, ResourceFile, ResourceIdentifier, ResourceVariant
 from ide.models.project import Project
 from ide.utils.project import find_project_root_and_manifest, InvalidProjectArchiveException, MANIFEST_KINDS, BaseProjectItem
-from ide.utils.sdk import generate_manifest, generate_wscript_file, generate_jshint_file, manifest_name_for_project, load_manifest_dict
+from ide.utils.sdk import generate_manifest, generate_wscript_file, generate_jshint_file, generate_tsconfig_file, manifest_name_for_project, load_manifest_dict
 from utils.td_helper import send_td_event
 
 __author__ = 'katharine'
@@ -44,13 +44,16 @@ def add_project_to_archive(z, project, prefix='', suffix=''):
         for variant in resource.variants.all():
             z.writestr('%s/%s/%s' % (prefix, project.resources_path, variant.path), variant.get_contents())
 
-    manifest = generate_manifest(project, resources)
+    manifest = generate_manifest(project, resources, for_export=True)
     manifest_name = manifest_name_for_project(project)
     z.writestr('%s/%s' % (prefix, manifest_name), manifest)
     if project.is_standard_project_type:
         # This file is always the same, but needed to build.
         z.writestr('%s/wscript' % prefix, generate_wscript_file(project, for_export=True))
         z.writestr('%s/jshintrc' % prefix, generate_jshint_file(project))
+        # Generated for the same reason the wscript is (see project_assembly).
+        if project.source_files.filter(target='tsx').exists():
+            z.writestr('%s/tsconfig.json' % prefix, generate_tsconfig_file(project))
 
 
 @shared_task(acks_late=True)

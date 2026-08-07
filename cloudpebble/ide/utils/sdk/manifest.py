@@ -21,9 +21,9 @@ def manifest_name_for_project(project):
         return APPINFO_MANIFEST
 
 
-def generate_manifest(project, resources):
+def generate_manifest(project, resources, for_export=False):
     if project.is_standard_project_type:
-        return generate_v3_manifest(project, resources)
+        return generate_v3_manifest(project, resources, for_export)
     elif project.project_type == "pebblejs":
         return generate_pebblejs_manifest(project, resources)
     elif project.project_type == "simplyjs":
@@ -36,8 +36,8 @@ def generate_v2_manifest(project, resources):
     return dict_to_pretty_json(generate_v2_manifest_dict(project, resources))
 
 
-def generate_v3_manifest(project, resources):
-    return dict_to_pretty_json(generate_v3_manifest_dict(project, resources))
+def generate_v3_manifest(project, resources, for_export=False):
+    return dict_to_pretty_json(generate_v3_manifest_dict(project, resources, for_export))
 
 
 def generate_v2_manifest_dict(project, resources):
@@ -63,7 +63,7 @@ def generate_v2_manifest_dict(project, resources):
     return manifest
 
 
-def generate_v3_manifest_dict(project, resources):
+def generate_v3_manifest_dict(project, resources, for_export=False):
     manifest = {
         "name": project.npm_name,
         "author": project.app_company_name,
@@ -92,7 +92,36 @@ def generate_v3_manifest_dict(project, resources):
             manifest["pebble"]["watchapp"]["hiddenApp"] = project.app_is_hidden
     if project.app_platforms:
         manifest["pebble"]["targetPlatforms"] = project.app_platform_list
+    if for_export:
+        _add_ts_toolchain_tooling(project, manifest)
     return manifest
+
+
+def _add_ts_toolchain_tooling(project, manifest):
+    """ Give an exported TypeScript project a runnable local build.
+
+    Hosted builds run the image-pinned toolchain, so the generated manifest
+    normally omits it — but an export leaves CloudPebble, and without the
+    devDependency and build script the project cannot build outside it. The
+    hosted build path must NOT get these: its `npm install` would pointlessly
+    download a toolchain it never runs. """
+    from django.conf import settings
+    from ide.utils.alloy_templates import toolchain_version
+
+    toolchain = getattr(settings, "TS_TOOLCHAIN", {})
+    if not toolchain.get("root"):
+        return
+    if not project.source_files.filter(target="tsx").exists():
+        return
+    build = toolchain["build"]
+    manifest["scripts"] = {
+        "build": " ".join(
+            ["node", "node_modules/%s/%s" % (toolchain["package"], build[0])] + build[1:]
+        ),
+    }
+    manifest["devDependencies"] = {
+        toolchain["package"]: "^%s" % toolchain_version(),
+    }
 
 
 def generate_manifest_dict(project, resources):

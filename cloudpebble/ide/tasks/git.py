@@ -238,10 +238,10 @@ def github_push(user, commit_message, repo_name, project):
         has_changed = True
         if remote_manifest_path in next_tree:
             next_tree[remote_manifest_path]._InputGitTreeElement__sha = NotSet
-            next_tree[remote_manifest_path]._InputGitTreeElement__content = generate_manifest(project, resources)
+            next_tree[remote_manifest_path]._InputGitTreeElement__content = generate_manifest(project, resources, for_export=True)
         else:
             next_tree[remote_manifest_path] = InputGitTreeElement(path=remote_manifest_path, mode='100644', type='blob',
-                                                                  content=generate_manifest(project, resources))
+                                                                  content=generate_manifest(project, resources, for_export=True))
 
     if project.project_type == 'native' and remote_wscript_path not in next_tree:
         next_tree[remote_wscript_path] = InputGitTreeElement(path=remote_wscript_path, mode='100644', type='blob',
