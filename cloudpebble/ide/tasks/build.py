@@ -103,6 +103,37 @@ def run_compile(build_result):
                 output = subprocess.check_output(npm_command, stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ)
                 subprocess.check_output([settings.NPM_BINARY, "dedupe"], stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ)
 
+            # TypeScript-authored embedded JS: compile src/tsx into
+            # src/embeddedjs before the SDK's Moddable prebuild reads it.
+            #
+            # The toolchain that runs here is the one baked into the image
+            # (PEBBLE_SIGNALS_ROOT, pinned at image-build time), NEVER one
+            # resolved from the project's own package.json, and the command
+            # is fixed rather than taken from the project's npm scripts —
+            # so a project can supply sources, never the code that runs.
+            # That keeps the same trust model as waf, mcrun and gcc.
+            #
+            # PEBBLE_SIGNALS_BUILD_ARGS defaults to --no-prune, which trades
+            # the toolchain's per-module pruning for build time: measured here
+            # on a real watchface, 22s vs 170s for a resource pack of 33.5KB
+            # vs 24.8KB. Hosted builds are the iterate-and-see case, so time
+            # wins by default; a store upload is better served by the author's
+            # own release build, and the setting can turn pruning back on.
+            if project.source_files.filter(target='tsx').exists():
+                if not settings.PEBBLE_SIGNALS_ROOT:
+                    raise Exception(
+                        "This project has TypeScript sources but the build image has no "
+                        "TypeScript toolchain installed."
+                    )
+                output += subprocess.check_output(
+                    [settings.NODE_BINARY,
+                     os.path.join(settings.PEBBLE_SIGNALS_ROOT,
+                                  'node_modules', 'pebble-signals', 'dist', 'build.mjs'),
+                     '--app', 'main', '--generate-only']
+                    + settings.PEBBLE_SIGNALS_BUILD_ARGS,
+                    stderr=subprocess.STDOUT, preexec_fn=_set_resource_limits, env=environ
+                )
+
             # Build against whichever SDK is active in the image (pinned at
             # image-build time in cloudpebble/Dockerfile).
             output += subprocess.check_output(

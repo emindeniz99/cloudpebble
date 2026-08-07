@@ -307,6 +307,34 @@ def build(ctx):
     return wscript.replace('{{jshint}}', 'False').replace('{{pkjs_entry}}', project.pkjs_entry_point or '')
 
 
+def generate_tsconfig_file(project):
+    """ The device-transpile config for alloy projects that author their
+    embedded JS in TypeScript: src/tsx -> src/embeddedjs/app, JSX through the
+    automatic runtime whose specifier the mod manifest maps on the watch.
+
+    Generated rather than imported, like the wscript and the manifest: the
+    compiler options belong to the toolchain, not to the project, and a
+    hand-edited one is a build failure the IDE cannot explain.
+    """
+    return json.dumps({
+        "compilerOptions": {
+            "target": "es2022",
+            "module": "esnext",
+            "moduleResolution": "bundler",
+            "jsx": "react-jsx",
+            "jsxImportSource": "runtime",
+            "outDir": "src/embeddedjs/app",
+            "rootDir": "src/tsx",
+            # transpile-only: type errors are the author's editor's business,
+            # not a reason to fail a build that would otherwise run.
+            "noCheck": True,
+            "types": [],
+            "isolatedModules": True,
+        },
+        "include": ["src/tsx/**/*"],
+    }, indent=2)
+
+
 def generate_wscript_file_alloy(project, for_export):
     jshint = project.app_jshint
     wscript = """#

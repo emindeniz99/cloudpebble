@@ -292,6 +292,8 @@ class SourceFile(TextFile):
         ('public', _('Public Header File')),
         ('common', _('Shared JS')),
         ('embeddedjs', _('Embedded JS')),
+        ('tsx', _('TypeScript source')),
+        ('assets', _('Moddable asset')),
     )
     target = models.CharField(max_length=12, choices=TARGETS, default='app')
 
@@ -321,10 +323,17 @@ class SourceFile(TextFile):
         'alloy': OrderedDict([
             ('pkjs', ['src/pkjs']),
             ('embeddedjs', ['src/embeddedjs']),
+            # TSX sources are compiled into src/embeddedjs by the project's
+            # toolchain before the Moddable prebuild. Listed before 'app'
+            # because that entry's bare 'src' would otherwise swallow them.
+            ('tsx', ['src/tsx']),
+            # Vector/bitmap assets the embedded-JS manifest points at. Binary,
+            # so no extension restriction — same rule as embeddedjs itself.
+            ('assets', ['assets']),
             ('app', ['src/c', 'src']),
         ])
     }
-    TEXT_EXTENSIONS = {'.c', '.h', '.js', '.json'}
+    TEXT_EXTENSIONS = {'.c', '.h', '.js', '.json', '.ts', '.tsx'}
 
     @staticmethod
     def _normalise_path(path):
@@ -349,8 +358,10 @@ class SourceFile(TextFile):
             break
         else:
             raise ValueError(_("Unacceptable file path for this project [%s]") % path)
-        if file_target == 'embeddedjs':
+        if file_target in ('embeddedjs', 'assets'):
             expected_exts = None
+        elif file_target == 'tsx':
+            expected_exts = ('.ts', '.tsx', '.json')
         elif file_target in ('pkjs', 'common') or project_type in ('pebblejs', 'simplyjs', 'rocky'):
             expected_exts = ('.js', '.json')
         else:

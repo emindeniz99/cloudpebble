@@ -8,7 +8,7 @@ from django.conf import settings
 from ide.models import ResourceFile
 from ide.utils.crypto import decrypt_value
 from .manifest import manifest_name_for_project, generate_manifest_dict
-from ide.utils.sdk import generate_wscript_file, generate_jshint_file
+from ide.utils.sdk import generate_wscript_file, generate_jshint_file, generate_tsconfig_file
 
 
 def assemble_source_files(project, base_dir):
@@ -107,6 +107,11 @@ def assemble_project(project, base_dir, build_result=None):
             wscript.write(generate_wscript_file(project))
         with open(os.path.join(base_dir, 'pebble-jshintrc'), 'w') as jshint:
             jshint.write(generate_jshint_file(project))
+        # TypeScript-authored embedded JS needs a compiler config; it is
+        # generated for the same reason the wscript is.
+        if project.source_files.filter(target='tsx').exists():
+            with open(os.path.join(base_dir, 'tsconfig.json'), 'w') as tsconfig:
+                tsconfig.write(generate_tsconfig_file(project))
     elif project.project_type == 'simplyjs':
         # SimplyJS is a particularly special case
         assemble_simplyjs_sources(project, base_dir, build_result)

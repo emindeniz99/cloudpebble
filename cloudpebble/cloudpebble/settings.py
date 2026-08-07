@@ -435,6 +435,20 @@ SDK2_PEBBLE_WAF = _environ.get('SDK2_PEBBLE_WAF', '/sdk2/pebble/waf')
 SDK3_PEBBLE_WAF = _environ.get('SDK3_PEBBLE_WAF', '/sdk3/pebble/waf')
 
 NPM_BINARY = _environ.get('NPM_BINARY', 'npm')
+NODE_BINARY = _environ.get('NODE_BINARY', 'node')
+# Root of the image-pinned TypeScript toolchain for alloy projects with
+# src/tsx sources (installed in cloudpebble/Dockerfile). Empty disables the
+# compile step — projects with TSX sources then fail loudly rather than
+# building stale embedded JS.
+PEBBLE_SIGNALS_ROOT = _environ.get('PEBBLE_SIGNALS_ROOT', '/opt/pebble-signals')
+# Extra flags for that compile step, space separated. The default trades the
+# toolchain's per-module pruning for build time. Measured on a real watchface,
+# on this stack: pruning takes the build from 22s to 170s and shrinks the
+# shipped resource pack from 33.5KB to 24.8KB (-26%). For a hosted build the
+# time is the scarcer resource — an author shipping to the store still gets
+# the smaller artifact from a local release build. An operator with CPU
+# headroom can set this to '' to always run the full pipeline.
+PEBBLE_SIGNALS_BUILD_ARGS = _environ.get('PEBBLE_SIGNALS_BUILD_ARGS', '--no-prune').split()
 
 # Toolchain now comes from pebble-tool SDK, available in PATH
 ARM_CS_TOOLS = _environ.get('ARM_CS_TOOLS', '')
