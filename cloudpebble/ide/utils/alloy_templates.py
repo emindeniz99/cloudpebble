@@ -1,9 +1,16 @@
 import io
 import json
 import os
+import uuid
 import zipfile
 
+from django.conf import settings
+
 EXAMPLES_ROOT = '/opt/pebble-examples'
+# The TypeScript starter is not an example on disk: it is the scaffold the
+# installed toolchain ships, so it always matches the compiler that will
+# build it.
+TOOLCHAIN_TEMPLATE_ID = 'typescript/starter'
 WATCHFACE_TUTORIAL_ROOT = '/opt/watchface-tutorial'
 WATCHFACE_TUTORIAL_PREFIX = 'watchface-tutorial'
 WATCHFACE_TUTORIAL_PARTS = [
@@ -71,6 +78,59 @@ def _ordered_paths(paths):
     return tutorial + watchfaces + apps + remainder
 
 
+def _toolchain_template_dir():
+    """ templates/app inside the pinned toolchain, or None. """
+    root = getattr(settings, 'PEBBLE_SIGNALS_ROOT', '')
+    if not root:
+        return None
+    path = os.path.join(root, 'node_modules', 'pebble-signals', 'templates', 'app')
+    return path if os.path.isdir(path) else None
+
+
+def _render_toolchain_template(target_dir):
+    """ Zip templates/app, filling in the scaffold's placeholders.
+
+    The template ships package.json.tmpl rather than package.json — the
+    scaffold CLI substitutes a name, author and uuid. The importer needs a
+    real manifest to recognise a project, so do the same here; CloudPebble
+    overwrites the metadata from the project settings immediately afterwards.
+    """
+    values = {
+        '__PKG_NAME__': 'pebble-app',
+        '__APP_NAME__': 'Pebble App',
+        '__AUTHOR__': 'CloudPebble',
+        '__UUID__': str(uuid.uuid4()),
+        '__PKG_VERSION__': _toolchain_version(),
+    }
+    bundle = io.BytesIO()
+    with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for dirpath, dirnames, filenames in os.walk(target_dir):
+            dirnames[:] = [d for d in dirnames if not d.startswith('.') and d != '.git']
+            for filename in filenames:
+                if filename.startswith('.') or filename == 'gitignore':
+                    continue
+                full_path = os.path.join(dirpath, filename)
+                arcname = os.path.relpath(full_path, target_dir)
+                if filename.endswith('.tmpl'):
+                    with open(full_path, 'r') as handle:
+                        content = handle.read()
+                    for placeholder, value in values.items():
+                        content = content.replace(placeholder, value)
+                    archive.writestr(arcname[:-len('.tmpl')], content)
+                else:
+                    archive.write(full_path, arcname=arcname)
+    return bundle.getvalue()
+
+
+def _toolchain_version():
+    root = getattr(settings, 'PEBBLE_SIGNALS_ROOT', '')
+    try:
+        with open(os.path.join(root, 'node_modules', 'pebble-signals', 'package.json')) as handle:
+            return json.load(handle)['version']
+    except (OSError, ValueError, KeyError):
+        return '0.0.0'
+
+
 def _is_moddable_project(project_dir):
     package_json = os.path.join(project_dir, 'package.json')
     src_embeddedjs = os.path.join(project_dir, 'src', 'embeddedjs')
@@ -104,10 +164,21 @@ def list_alloy_templates():
             if os.path.isdir(part_dir) and _is_moddable_project(part_dir):
                 paths.append('%s/%s' % (WATCHFACE_TUTORIAL_PREFIX, slug))
 
-    if not paths:
-        return []
-
     templates = []
+    # The toolchain's own scaffold, when one is installed. Listed first: it is
+    # the only entry here that starts you in TypeScript.
+    if _toolchain_template_dir():
+        templates.append({
+            'id': TOOLCHAIN_TEMPLATE_ID,
+            'path': TOOLCHAIN_TEMPLATE_ID,
+            'label': 'TypeScript starter',
+            'dir': 'typescript',
+            'group': 'typescript',
+        })
+
+    if not paths:
+        return templates
+
     for path in _ordered_paths(paths):
         template_dir = _template_group(path)
         templates.append({
@@ -130,6 +201,12 @@ def _resolve_template_directory(template_path):
 
 
 def build_template_archive(template_path):
+    if template_path == TOOLCHAIN_TEMPLATE_ID:
+        target_dir = _toolchain_template_dir()
+        if not target_dir:
+            raise ValueError('No TypeScript toolchain is installed')
+        return _render_toolchain_template(target_dir)
+
     target_dir, root = _resolve_template_directory(template_path)
     if not target_dir.startswith(root + os.sep):
         raise ValueError('Invalid template path')
