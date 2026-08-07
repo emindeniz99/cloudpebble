@@ -101,7 +101,7 @@ def _render_toolchain_template(target_dir):
         '__APP_NAME__': 'Pebble App',
         '__AUTHOR__': 'CloudPebble',
         '__UUID__': str(uuid.uuid4()),
-        '__PKG_VERSION__': toolchain_version(),
+        '__PKG_VERSION__': toolchain_version() or '',
     }
     bundle = io.BytesIO()
     with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -130,7 +130,9 @@ def toolchain_version():
                                toolchain['package'], 'package.json')) as handle:
             return json.load(handle)['version']
     except (OSError, ValueError, KeyError):
-        return '0.0.0'
+        # No version rather than a fake one: '^0.0.0' is a dependency npm
+        # cannot resolve, which is worse than saying nothing.
+        return None
 
 
 def _is_moddable_project(project_dir):

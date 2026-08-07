@@ -106,3 +106,15 @@ class TestExportDevTooling(TestCase):
         # The exported script is the toolchain's full pipeline. --generate-only
         # belongs to the hosted build, where the SDK finishes the job.
         self.assertNotIn('--generate-only', manifest['scripts']['build'])
+
+    def test_export_omits_tooling_when_the_version_cannot_be_read(self):
+        """ '^0.0.0' is a dependency npm cannot resolve: a manifest that names
+        no toolchain fails honestly, one that names an impossible version
+        fails at install time with nothing to act on. """
+        self._add_tsx_source()
+        os.unlink(os.path.join(self.toolchain_root, 'node_modules',
+                               'pebble-signals', 'package.json'))
+        with override_settings(TS_TOOLCHAIN=self.toolchain):
+            manifest = generate_v3_manifest_dict(self.project, [], for_export=True)
+        self.assertNotIn('devDependencies', manifest)
+        self.assertNotIn('scripts', manifest)

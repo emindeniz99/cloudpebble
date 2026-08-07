@@ -113,6 +113,9 @@ def _add_ts_toolchain_tooling(project, manifest):
         return
     if not project.source_files.filter(target="tsx").exists():
         return
+    version = toolchain_version()
+    if not version:
+        return
     build = toolchain["build"]
     manifest["scripts"] = {
         "build": " ".join(
@@ -120,7 +123,7 @@ def _add_ts_toolchain_tooling(project, manifest):
         ),
     }
     manifest["devDependencies"] = {
-        toolchain["package"]: "^%s" % toolchain_version(),
+        toolchain["package"]: "^%s" % version,
     }
 
 
