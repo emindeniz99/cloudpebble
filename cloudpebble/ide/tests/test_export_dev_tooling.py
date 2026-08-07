@@ -1,7 +1,9 @@
+import io
 import json
 import os
 import shutil
 import tempfile
+import zipfile
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -78,3 +80,29 @@ class TestExportDevTooling(TestCase):
             manifest = generate_v3_manifest_dict(self.project, [], for_export=True)
         self.assertNotIn('devDependencies', manifest)
         self.assertNotIn('scripts', manifest)
+
+    def test_exported_archive_carries_the_tooling(self):
+        """ The wiring, not the helper: deleting for_export=True from
+        add_project_to_archive leaves the tests above green but ships a zip
+        nobody can build. """
+        # Local import: ide.tasks.archive pulls in celery at module scope.
+        from ide.tasks.archive import add_project_to_archive
+
+        source = SourceFile.objects.create(project=self.project, file_name='main.tsx', target='tsx')
+        source.save_text('export default 1;\n')
+
+        buf = io.BytesIO()
+        with override_settings(TS_TOOLCHAIN=self.toolchain), zipfile.ZipFile(buf, 'w') as archive:
+            add_project_to_archive(archive, self.project)
+
+        with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as archive:
+            names = {name.split('/', 1)[1] for name in archive.namelist()}
+            manifest = json.loads(archive.read(
+                [n for n in archive.namelist() if n.endswith('package.json')][0]))
+
+        self.assertIn('src/tsx/main.tsx', names)
+        self.assertIn('tsconfig.json', names)
+        self.assertEqual(manifest['devDependencies'], {'pebble-signals': '^1.2.3'})
+        # The exported script is the toolchain's full pipeline. --generate-only
+        # belongs to the hosted build, where the SDK finishes the job.
+        self.assertNotIn('--generate-only', manifest['scripts']['build'])
