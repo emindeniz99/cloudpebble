@@ -75,9 +75,21 @@ def strip_pkjs_source_map(pbw_path):
             if not maps:
                 return
             kept = [(e, z.read(e.filename)) for e in entries if not e.filename.endswith('.js.map')]
-        with zipfile.ZipFile(pbw_path, 'w', compression=zipfile.ZIP_DEFLATED) as z:
-            for info, data in kept:
-                z.writestr(info, data)
+        # Build the replacement beside the original and swap it in, so a
+        # failure mid-rewrite leaves the finished .pbw untouched rather than
+        # truncated. Nothing downstream re-validates the archive — publish
+        # ships the last successful build without rebuilding it — so a partial
+        # write here would be a valid zip that is quietly missing files.
+        temp_path = pbw_path + '.stripped'
+        try:
+            with zipfile.ZipFile(temp_path, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+                for info, data in kept:
+                    z.writestr(info, data)
+            os.replace(temp_path, pbw_path)
+        except Exception:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise
     except Exception:
         # Never fail a good build over a size/hygiene step.
         logger.exception("Could not strip source maps from %s", pbw_path)
